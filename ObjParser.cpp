@@ -1,11 +1,15 @@
 #include "ObjParser.h"
 
 
-ObjParser::ObjParser(std::string file_path) :file_p(file_path) {
-	this->parse_file(false);
+ObjParser::ObjParser(std::string file_path) : ObjParser(file_path, false) {
+
 }
+
 ObjParser::ObjParser(std::string file_path, bool is_test) : file_p(file_path) {
 	this->parse_file(is_test);
+	std::cout << "start 'get_normal_to_vertexes'" << std::endl;
+	this->norm_to_vert = this->get_normal_to_vertexes();
+	std::cout << "end 'get_normal_to_vertexes'" << std::endl;
 };
 
 void ObjParser::parse_file(bool is_test) {
@@ -105,9 +109,9 @@ void ObjParser::parse_file(bool is_test) {
 		std::cout << "normals : " << normals.size() << ' ' << normals[1].size() << ' ' << normals[2].size() << '\n';
 		std::cout << "textures: " << textures.size() << ' ' << textures[1].size() << ' ' << textures[2].size() << '\n';
 
-		std::cout << "fvertex  : " << fvertex.size() << ' ' << fvertex[0].size() << "( " << fvertex[0][0]<< " )" << fvertex[1].size() << "( " << fvertex[1][0]<< " )" << fvertex[2].size() << "( " << fvertex[2][0]<< " )\n";
-		std::cout << "fnormals : " << fnormal.size() << ' ' << fnormal[0].size() << "( "<< fnormal[0][0]  << " )" << fnormal[1].size() << "( "<< fnormal[1][0] << " )" << fnormal[2].size() << "( " << fnormal[2][0]<< " )\n";
-		std::cout << "ftextures: " << ftexture.size() << ' ' << ftexture[0].size() << "( " << ftexture[0][0]<< " )" << ftexture[1].size() << "( " << ftexture[1][0]<< " )" << ftexture[2].size() << "( " << ftexture[2][0]<< " )\n";
+		std::cout << "fvertex  : " << fvertex.size() << ' ' << fvertex[0].size() << "( " << fvertex[0][0] << " )" << fvertex[1].size() << "( " << fvertex[1][0] << " )" << fvertex[2].size() << "( " << fvertex[2][0] << " )\n";
+		std::cout << "fnormals : " << fnormal.size() << ' ' << fnormal[0].size() << "( " << fnormal[0][0] << " )" << fnormal[1].size() << "( " << fnormal[1][0] << " )" << fnormal[2].size() << "( " << fnormal[2][0] << " )\n";
+		std::cout << "ftextures: " << ftexture.size() << ' ' << ftexture[0].size() << "( " << ftexture[0][0] << " )" << ftexture[1].size() << "( " << ftexture[1][0] << " )" << ftexture[2].size() << "( " << ftexture[2][0] << " )\n";
 		std::cout << std::endl;
 	}
 	this->normals = nc::asarray<float>(normals);
@@ -129,6 +133,45 @@ void ObjParser::parse_file(bool is_test) {
 		std::cout << "normals index shape : "; this->tri_ind[NORMAL].shape().print();
 		std::cout << "\n\n\n";
 	}
+}
+std::vector<nc::NdArray<float>> ObjParser::get_normal_to_vertexes() {
+	// инициализация вектора матриц (формально)
+	// C хранит массивы по строкам. Строки - нормали.
+	std::vector<nc::NdArray<float>> answer(this->vertexes.numRows(), nc::zeros<float>(1, 3)); // vertexes.numRows() = vertexes.shape().rows
+	// see shapes.png or shapes in console from "parse_file" method [3, 30338] - tri_ind[vertexes]
+	// ловим деление на ноль. Норма от [0,0,0] - 0.
+	nc::NdArray<bool> is_used = nc::NdArray<bool>(1, answer.size()).fill(false);
+	// цикл по треугольникам
+	for (int i = 0; i < this->tri_ind[VERTEX].numCols(); ++i) {
+		// цикл по вершинам
+		for (int j = 0; j < 3; ++j) {
+			//check
+			/*if (i < 3) {
+
+			}*/
+			int norm_ind = this->tri_ind[NORMAL](j, i);
+			int ver_ind = this->tri_ind[VERTEX](j, i);
+			answer[ver_ind] = answer[ver_ind] + this->normals(norm_ind, this->normals.cSlice()); // shapes [1,3] + [1,3]
+			if (!is_used(0, ver_ind)) {
+				is_used(0, ver_ind) = true;
+			}
+			// check
+			else {
+				if (ver_ind < 3) {
+					std::cout << "index " << ver_ind << '\n';
+					answer[ver_ind].print();
+					std::cout << "\n\n";
+				}
+			}
+		}
+	}
+	// normalize
+	for (int i = 0; i < answer.size(); ++i) {
+		if(is_used(0,i)){
+			answer[i] = nc::divide<float>(answer[i], nc::norm(answer[i])(0, 0));
+		}
+	}
+	return answer;
 }
 //void ObjParser::handle_copy_in_ndarray(std::vector<float> from, nc::NdArray<float> in) {
 //

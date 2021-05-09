@@ -1,7 +1,8 @@
 #include "App.h"
 
 
-App::App(std::string file_path) :model(ObjParser(file_path, true)) {
+App::App(std::string file_path, double t_param,bool is_use_fill_drawing=true,bool is_rand_color_=false)
+	:model(ObjParser(file_path, true)),t(t_param),is_use_fill_for_drawing(is_use_fill_drawing),is_rand_color(is_rand_color_) {
 
 };
 //============================================== Methods =========================================================================
@@ -17,6 +18,10 @@ void App::task5() {
 	std::cout << "In func" << std::endl;
 	auto vertexes = this->model.vertexes; //this->project_on_plane();
 	nc::NdArray<float> ligth_dir = { 0,0,1 };
+	// set the flags
+	this->is_use_fill_for_drawing = false;
+	this->is_rand_color = false;
+
 	for (int i = 3; i < 4; ++i) {
 		nc::NdArray<float> mat = {
 			{size_xy[i], 0 , shift},
@@ -29,7 +34,7 @@ void App::task5() {
 		Image img = Image(1000, 1000, black);
 		std::cout << "image " << i << std::endl;
 		nc::NdArray<float> z_buff;// =  nc::NdArray<float>(img.width(), img.height()).fill(FLT_MAX);
-		this->draw_triangles(img, green, mat, vertexes, z_buff, ligth_dir, false, false);
+		this->draw_triangles(img, green, mat, vertexes, z_buff, ligth_dir);
 
 		img.save("TASK5_" + std::to_string(i) + ".png");
 	};
@@ -42,7 +47,7 @@ void App::task11() {
 	float size_xy[] = { 50,100,500,4000 };
 	float shift = 500;
 	std::cout << "In func" << std::endl;
-	auto vertexes = this->model.vertexes;//this->project_on_plane();
+	auto vertexes = this->model.vertexes; //this->project_on_plane();
 	bool is_use_fill_for_drawing = true;
 	bool is_rand_color = true;
 	nc::NdArray<float> ligth_dir = { 0,0,1 };
@@ -60,14 +65,14 @@ void App::task11() {
 
 		nc::NdArray<float> z_buff = nc::NdArray<float>(img.width(), img.height()).fill(FLT_MAX);
 		std::cout << "image " << i << std::endl;;
-		this->draw_triangles(img, rand_color, mat, vertexes, z_buff, ligth_dir, is_use_fill_for_drawing, is_rand_color);
+		this->draw_triangles(img, rand_color, mat, vertexes, z_buff, ligth_dir);
 
 		img.save("TASK11_" + std::to_string(i) + ".png");
 	};
 }
 
 void App::draw_triangles(Image & image, const Color3 & line_color, nc::NdArray<float> & transform_to_Image, nc::NdArray<float> & vertexes,
-	nc::NdArray<float>& z_buff, nc::NdArray<float> & light_dir, bool is_use_fill_for_drawing, bool is_rand_color) {
+	nc::NdArray<float>& z_buff, nc::NdArray<float> & light_dir) {
 	// lazy))
 	if (vertexes.shape().cols == 0 && vertexes.shape().cols == 0) {
 		vertexes = this->model.vertexes;
@@ -110,13 +115,13 @@ void App::draw_triangles(Image & image, const Color3 & line_color, nc::NdArray<f
 
 		//std::cout << "\n\n";
 		nc::NdArray<float> a = triangle_f[1] - triangle_f[0],
-			b = triangle_f[1] - triangle_f[2];
+		b = triangle_f[1] - triangle_f[2];
 		nc::NdArray<float> normal = nc::cross(a, b);
 		float norm_n = nc::norm(normal)(0, 0);
 		normal = normal / norm_n;
 		float scalar_mul = nc::dot(normal, light_dir)(0, 0);
 		// draw visible triangle. All vector is normilazed
-		if (is_rand_color) {
+		if (this->is_rand_color) {
 			color = Color3();
 		}
 		else {
@@ -124,7 +129,7 @@ void App::draw_triangles(Image & image, const Color3 & line_color, nc::NdArray<f
 			color = line_color;
 		}
 		if (scalar_mul > 0) {
-			if (is_use_fill_for_drawing) {
+			if (this->is_use_fill_for_drawing) {
 				this->draw_triangle_by_filling(image, color, triangle, triangle_f,tri_f_translated, z_buff);
 			}
 			else {
@@ -200,11 +205,18 @@ void App::draw_triangle_by_filling(Image & image, const Color3 & fill_color, std
 }
 
 
-nc::NdArray<float> App::project_on_plane() {
+nc::NdArray<float> App::project_on_plane(bool is_set_ones) {
 	nc::NdArray<float> *vert = &(this->model.vertexes);
+	nc::NdArray<float> answer;
 	nc::NdArray<float> temp = (*vert)(vert->rSlice(), nc::Slice(0, 2)); // vertex  : 15258 3
-	nc::NdArray<float> onesN = nc::ones<float>(temp.shape().rows, 1); // vector with ones
-	nc::NdArray<float> answer = nc::hstack({ temp, onesN });
+	nc::NdArray<float> staking;
+	if(is_set_ones){
+		staking = nc::ones<float>(temp.shape().rows, 1); // vector with ones
+	}
+	else{
+		staking = nc::add<float>((*vert)(vert->rSlice(), nc::Slice(2, 3)), float(this->t));
+	}
+	answer = nc::hstack({ temp, staking });
 	return answer;
 }
 
