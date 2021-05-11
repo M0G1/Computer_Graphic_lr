@@ -41,9 +41,9 @@ std::vector<unsigned char> Image::toVectorChar() {
 	std::vector<unsigned char> buff = std::vector<unsigned char>(this->m_height * m_width * 3, 0);
 	// fill new vector with helping of Color3 method 
 	for (int i = 0; i < this->m_data.size(); ++i) {
-		buff[3 * i] = unsigned char(this->m_data[i].r * 256);
-		buff[3 * i + 1] = unsigned char(this->m_data[i].g * 256);
-		buff[3 * i + 2] = unsigned char(this->m_data[i].b * 256);
+		buff[3 * i] = unsigned char(this->m_data[i].r * 255);
+		buff[3 * i + 1] = unsigned char(this->m_data[i].g * 255);
+		buff[3 * i + 2] = unsigned char(this->m_data[i].b * 255);
 		//unsigned char* temp = this->m_data[i].getChar();
 		/*for (short j = 0; j < 3; ++j) {
 			buff[3 * i + j] = temp[j];

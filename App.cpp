@@ -1,18 +1,17 @@
-#include "App.h"
+п»ї#include "App.h"
 
 
-App::App(std::string file_path, double t_param,bool is_use_fill_drawing=true,bool is_rand_color_=false)
-	:model(ObjParser(file_path, true)),t(t_param),is_use_fill_for_drawing(is_use_fill_drawing),is_rand_color(is_rand_color_) {
+App::App(std::string file_path, double t_param, bool is_use_fill_drawing, bool is_rand_color_, bool is_use_ones, bool is_advan_light)
+	:model(ObjParser(file_path, true)), t(t_param), is_use_fill_for_drawing(is_use_fill_drawing), is_rand_color(is_rand_color_), is_set_ones(is_use_ones),
+	is_adv_light(is_advan_light) {
 
 };
 //============================================== Methods =========================================================================
 
-
-
 void App::task5() {
-	// перевести в координаты изображения 
-	// взять целые
-	// рисуем линии
+	// РїРµСЂРµРІРµСЃС‚Рё РІ РєРѕРѕСЂРґРёРЅР°С‚С‹ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ 
+	// РІР·СЏС‚СЊ С†РµР»С‹Рµ
+	// СЂРёСЃСѓРµРј Р»РёРЅРёРё
 	float size_xy[] = { 50,100,500,4000 };
 	float shift = 500;
 	std::cout << "In func" << std::endl;
@@ -28,7 +27,7 @@ void App::task5() {
 			{0, size_xy[i], shift},
 			{0, 0, 1}
 		};
-		//Изображение
+		//РР·РѕР±СЂР°Р¶РµРЅРёРµ
 		Color3 black = Color3(unsigned char(0), 0, 0);
 		Color3 green = Color3(unsigned char(0), 255, 0);
 		Image img = Image(1000, 1000, black);
@@ -41,15 +40,29 @@ void App::task5() {
 }
 
 void App::task11() {
-	// перевести в координаты изображения 
-	// взять целые
-	// рисуем линии
-	float size_xy[] = { 50,100,500,4000 };
+	// РїРµСЂРµРІРµСЃС‚Рё РІ РєРѕРѕСЂРґРёРЅР°С‚С‹ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ 
+	// РІР·СЏС‚СЊ С†РµР»С‹Рµ
+	// СЂРёСЃСѓРµРј Р»РёРЅРёРё
+	float size_xy[] = { 50,100,500,5000 };
 	float shift = 500;
 	std::cout << "In func" << std::endl;
+	//rotation
+	nc::NdArray<float> rot_mat = this->get_rot_mat(0, 0.0, 0);
+	std::cout << "rot mat\n" << rot_mat;
+	// equal to mat * vertexes
+	this->model.vertexes = nc::dot(this->model.vertexes, nc::transpose(rot_mat));
+	this->model.normals = nc::dot(this->model.normals, nc::transpose(rot_mat));
+	this->model.norm_to_vert = this->model.get_normal_to_vertexes();
+	/*auto not_rot_norm = this->model.norm_to_vert;
+	for(int i =0; i < not_rot_norm.size();++i){
+		not_rot_norm[i] = nc::dot<float>(rot_mat, not_rot_norm[i]);
+	}
+	this->model.norm_to_vert = not_rot_norm;*/
+	// end rotation
 	auto vertexes = this->model.vertexes; //this->project_on_plane();
-	bool is_use_fill_for_drawing = true;
-	bool is_rand_color = true;
+	this->is_use_fill_for_drawing = true;
+	this->is_rand_color = false; //true
+	this->is_set_ones = false;
 	nc::NdArray<float> ligth_dir = { 0,0,1 };
 	for (int i = 3; i < 4; ++i) {
 		nc::NdArray<float> mat = {
@@ -57,7 +70,7 @@ void App::task11() {
 		{0, size_xy[i], shift},
 		{0, 0, 1}
 		};
-		//Изображение
+		//РР·РѕР±СЂР°Р¶РµРЅРёРµ
 		Color3 black = Color3(unsigned char(0), 0, 0);
 		Color3 rand_color = Color3();
 
@@ -67,9 +80,27 @@ void App::task11() {
 		std::cout << "image " << i << std::endl;;
 		this->draw_triangles(img, rand_color, mat, vertexes, z_buff, ligth_dir);
 
-		img.save("TASK11_" + std::to_string(i) + ".png");
+		img.save("TASK_last_3k_t0_96_" + std::to_string(i) + ".png");
 	};
 }
+
+nc::NdArray<float> App::get_rot_mat(float a, float b, float g) {
+	nc::NdArray<float> x_rot = {
+		{1,0,0},
+		{0,cosf(a), sinf(a)},
+		{0,-sinf(a), cosf(a)}
+	}, y_rot = {
+		{cosf(b),0,sinf(b)},
+		{0,1,0},
+		{sinf(b),0,cosf(b)}
+	}, z_rot = {
+		{cosf(g), sinf(g),0},
+		{-sinf(g), cosf(g),0},
+		{0,0,1}
+	};
+	return nc::dot(nc::dot<float>(x_rot, y_rot), z_rot);
+}
+
 
 void App::draw_triangles(Image & image, const Color3 & line_color, nc::NdArray<float> & transform_to_Image, nc::NdArray<float> & vertexes,
 	nc::NdArray<float>& z_buff, nc::NdArray<float> & light_dir) {
@@ -94,43 +125,63 @@ void App::draw_triangles(Image & image, const Color3 & line_color, nc::NdArray<f
 	nc::NdArray<float> transformed = nc::dot(this->project_on_plane(), nc::transpose(transform_to_Image));
 	transformed.shape().print();
 	Color3 color;
-	// цикл по индексам
-	for (int j = 0; j < this->model.tri_ind[VERTEX].shape().cols; ++j) {
-		//std::cout << "index " << j << std::endl;
+	auto triangle_count = this->model.tri_ind[VERTEX].shape().cols;
+	float  max_scalar_mul = -2., min_scalar_mul = 2.;
+	// С†РёРєР» РїРѕ С‚СЂРµСѓРіРѕР»СЊРЅРёРєР°Рј
+	for (int j = 0, thous = 0; j < triangle_count; ++j) {
+		if ((thous + 1) * 1000 < j) {
+			std::cout << "index " << j << " from " << triangle_count << std::endl;
+			++thous;
+		}
 		std::vector<nc::NdArray<float>> triangle_f, tri_f_translated;
 		std::vector<nc::NdArray<int>> triangle;
-		//цикл по вершинам
+		nc::NdArray<float> ligh_dot_val = nc::zeros<float>(1, 3);
+		//С†РёРєР» РїРѕ РІРµСЂС€РёРЅР°Рј
 		for (int k = 0; k < 3; ++k) {
-			//Ух, берем массив вершим и извлекаем точку по индексу
+			//Г“Гµ, ГЎГҐГ°ГҐГ¬ Г¬Г Г±Г±ГЁГў ГўГҐГ°ГёГЁГ¬ ГЁ ГЁГ§ГўГ«ГҐГЄГ ГҐГ¬ ГІГ®Г·ГЄГі ГЇГ® ГЁГ­Г¤ГҐГЄГ±Гі
 			int vert_ind = this->model.tri_ind[VERTEX](k, j);
-			//std::cout << "\n" << vert_ind << ' '; // test
+			////test
+			//std::cout << vert_ind;
+			//this->model.norm_to_vert[vert_ind].print();
+			////end test
+			////std::cout << "\n" << vert_ind << ' '; // test
+			////temp.print(); // test
+			// get normal on vertex index. vertex <--> norm_to_vert.
+			ligh_dot_val(0, k) = nc::dot<float>(light_dir, this->model.norm_to_vert[vert_ind])(0, 0);
 			nc::NdArray<float> temp = transformed(vert_ind, transformed.cSlice());
 			tri_f_translated.push_back(temp);
 			temp = vertexes(vert_ind, vertexes.cSlice());
-			//temp.print(); // test
 			triangle_f.push_back(temp);
 			temp = transformed(vert_ind, transformed.cSlice());
 			triangle.push_back(nc::around(temp).astype<int>());
 		}
-
+		//std::cout  <<"scalar mul of light and norm to vertex " << ligh_dot_val;
 		//std::cout << "\n\n";
 		nc::NdArray<float> a = triangle_f[1] - triangle_f[0],
-		b = triangle_f[1] - triangle_f[2];
+			b = triangle_f[1] - triangle_f[2];
 		nc::NdArray<float> normal = nc::cross(a, b);
 		float norm_n = nc::norm(normal)(0, 0);
 		normal = normal / norm_n;
 		float scalar_mul = nc::dot(normal, light_dir)(0, 0);
-		// draw visible triangle. All vector is normilazed
-		if (this->is_rand_color) {
-			color = Color3();
+		max_scalar_mul = abs(scalar_mul) > max_scalar_mul ? abs(scalar_mul) : max_scalar_mul;
+		min_scalar_mul = abs(scalar_mul) < min_scalar_mul ? abs(scalar_mul) : min_scalar_mul;
+
+		if (!this->is_adv_light) {
+			// draw visible triangle. All vector is normilazed
+			if (this->is_rand_color) {
+				color = Color3();
+			}
+			else {
+				color = Color3(0, std::abs(scalar_mul), 0);
+				//color = line_color;
+			}
 		}
 		else {
-			color = Color3(0, std::abs(scalar_mul), 0);
-			color = line_color;
+
 		}
 		if (scalar_mul > 0) {
 			if (this->is_use_fill_for_drawing) {
-				this->draw_triangle_by_filling(image, color, triangle, triangle_f,tri_f_translated, z_buff);
+				this->draw_triangle_by_filling(image, color, triangle, triangle_f, tri_f_translated, z_buff, ligh_dot_val);
 			}
 			else {
 				this->draw_triangle_borderds(image, color, triangle, triangle_f);
@@ -138,15 +189,19 @@ void App::draw_triangles(Image & image, const Color3 & line_color, nc::NdArray<f
 		}
 		triangle.~vector();
 		triangle_f.~vector();
+		ligh_dot_val.~NdArray();
 	}
+	std::cout << "max_scalar_mul" << max_scalar_mul << std::endl;
+	std::cout << "min_scalar_mul" << min_scalar_mul << std::endl;
 	std::cout << "all line drawed\n";
 }
 
+
 void App::draw_triangle_borderds(Image & image, const Color3 & line_color, std::vector<nc::NdArray<int>>& triangle, std::vector<nc::NdArray<float>>& triangle_f) {
-	// рисуем линии
-	// цикл по начальным точкам
+	// СЂРёСЃСѓРµРј Р»РёРЅРёРё
+	// С†РёРєР» РїРѕ РЅР°С‡Р°Р»СЊРЅС‹Рј С‚РѕС‡РєР°Рј
 	for (int k = 0; k < 2; ++k) {
-		// цикл по концевым точкам
+		// С†РёРєР» РїРѕ РєРѕРЅС†РµРІС‹Рј С‚РѕС‡РєР°Рј
 		for (int m = k + 1; m < 3; ++m) {
 			int x1 = triangle[k](0, 0);
 			int	x2 = triangle[m](0, 0);
@@ -158,7 +213,7 @@ void App::draw_triangle_borderds(Image & image, const Color3 & line_color, std::
 }
 
 void App::draw_triangle_by_filling(Image & image, const Color3 & fill_color, std::vector<nc::NdArray<int>>& triangle,
-	std::vector<nc::NdArray<float>>& triangle_f,std::vector<nc::NdArray<float>>& tri_f_trans, nc::NdArray<float>& z_buff) {
+	std::vector<nc::NdArray<float>>& triangle_f, std::vector<nc::NdArray<float>>& tri_f_trans, nc::NdArray<float>& z_buff, nc::NdArray<float>& light) {
 	/*
 	{{x_min,x_max}
 	{y_min,y_max}}
@@ -192,7 +247,14 @@ void App::draw_triangle_by_filling(Image & image, const Color3 & fill_color, std
 					lambda[2] * triangle_f[2](0, 2);
 				if (z < z_buff(x_int, y_int)) {
 					z_buff(x_int, y_int) = z;
-					image.set(x_int, y_int, fill_color);
+					Color3 set_color;
+					if (!this->is_adv_light)
+						set_color = fill_color;
+					else {
+						float brightness = lambda[0] * light(0, 0) + lambda[1] * light(0, 1) + lambda[2] * light(0, 2);
+						set_color = Color3(0, brightness, 0);
+					}
+					image.set(x_int, y_int, set_color);
 					++ind;
 				}
 				/*if (ind < 3){
@@ -205,21 +267,28 @@ void App::draw_triangle_by_filling(Image & image, const Color3 & fill_color, std
 }
 
 
-nc::NdArray<float> App::project_on_plane(bool is_set_ones) {
+nc::NdArray<float> App::project_on_plane() {
 	nc::NdArray<float> *vert = &(this->model.vertexes);
 	nc::NdArray<float> answer;
 	nc::NdArray<float> temp = (*vert)(vert->rSlice(), nc::Slice(0, 2)); // vertex  : 15258 3
 	nc::NdArray<float> staking;
-	if(is_set_ones){
+	if (this->is_set_ones) {
 		staking = nc::ones<float>(temp.shape().rows, 1); // vector with ones
 	}
-	else{
+	else {
 		staking = nc::add<float>((*vert)(vert->rSlice(), nc::Slice(2, 3)), float(this->t));
+		std::cout << "max z val " << nc::max<float>(nc::abs(staking)) << "- " << this->t << std::endl;
+		std::cout << "z coord before transform\n";
+		(*vert)(nc::Slice(0, 3), nc::Slice(2, 3)).print();
+		std::cout << "z coord after transform\n";
+		staking(nc::Slice(0, 3), staking.cSlice()).print();
+		std::cout << std::endl;
 	}
 	answer = nc::hstack({ temp, staking });
 	return answer;
 }
 
-nc::NdArray<float> App::project_transform( nc::NdArray<float> & transform_to_Image, float add_to_z){
-	
+nc::NdArray<float> App::project_transform(nc::NdArray<float> & transform_to_Image, float add_to_z) {
+	return nc::NdArray<float>();
 }
+

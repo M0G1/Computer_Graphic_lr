@@ -151,24 +151,35 @@ std::vector<nc::NdArray<float>> ObjParser::get_normal_to_vertexes() {
 			}*/
 			int norm_ind = this->tri_ind[NORMAL](j, i);
 			int ver_ind = this->tri_ind[VERTEX](j, i);
-			answer[ver_ind] = answer[ver_ind] + this->normals(norm_ind, this->normals.cSlice()); // shapes [1,3] + [1,3]
+			auto normal = this->normals(norm_ind, this->normals.cSlice());
+			/*std::cout << norm_ind << "normal";
+			normal.print();*/
+			answer[ver_ind] = answer[ver_ind] + normal; // shapes [1,3] + [1,3]
 			if (!is_used(0, ver_ind)) {
 				is_used(0, ver_ind) = true;
 			}
 			// check
 			else {
-				if (ver_ind < 3) {
+				/*if (ver_ind < 3) {
 					std::cout << "index " << ver_ind << '\n';
 					answer[ver_ind].print();
 					std::cout << "\n\n";
-				}
+				}*/
 			}
 		}
 	}
 	// normalize
 	for (int i = 0; i < answer.size(); ++i) {
-		if(is_used(0,i)){
+		if (is_used(0, i)) {
+			if (i < 3) {
+				std::cout << "res normal to vertex bn" << i << ' ';
+				answer[i].print();
+			}
 			answer[i] = nc::divide<float>(answer[i], nc::norm(answer[i])(0, 0));
+			if (i < 3) {
+				std::cout << "res normal to vertex an" << i << ' ';
+				answer[i].print();
+			}
 		}
 	}
 	return answer;
